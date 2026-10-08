@@ -1,36 +1,17 @@
-<script setup lang="ts">
-import { ref,onMounted } from 'vue';
+<!-- src/App.vue -->
+<script setup>
+import { onMounted } from 'vue'
 import 'aframe'
+import SceneView from './components/SceneView.vue'
+import { useTour } from './composables/useTour.js'
 
-const panoramas = [
-  '../public/assets/img/loc-1.jpg',
-  '../public/assets/img/loc-2.jpg',
-]
-
-const currentIndex = ref(0)
-const isTransitioning = ref(false)
-
-const nextPanorama = () => {
-  if (isTransitioning.value) return // защита от двойного клика
-
-  isTransitioning.value = true
-
-  // Ждем, пока оверлей полностью проявится (400мс — время анимации CSS)
-  setTimeout(() => {
-    currentIndex.value = (currentIndex.value + 1) % panoramas.length
-
-    // Даем A-Frame время загрузить новую текстуру, потом убираем оверлей
-    setTimeout(() => {
-      isTransitioning.value = false
-    }, 200)
-  }, 400)
-}
+const { currentLocation, isTransitioning, goTo } = useTour()
 
 onMounted(() => {
+  // Регистрируем компонент, который прокидывает A-Frame click в Vue
   AFRAME.registerComponent('vue-click', {
     init: function () {
       this.el.addEventListener('click', () => {
-        // Через emit передаем событие наружу
         this.el.emit('vue-clicked')
       })
     }
@@ -39,66 +20,58 @@ onMounted(() => {
 </script>
 
 <template>
-  <a-scene>
-    <!-- Панорама с тестовой картинкой -->
-    <a-sky :src="panoramas[currentIndex]"></a-sky>
-    <a-plane
-      class="clickable"
-      position="0 1.6 -3"
-      width="1.5"
-      height="0.5"
-      color="#4CC9F0"
-      text="value: ДАЛЕЕ; align: center; color: white; width: 3"
-      vue-click
-      @vue-clicked="nextPanorama"
-    ></a-plane>
-    
-    <!-- Камера, чтобы мы могли смотреть по сторонам -->
-    <a-entity position="0 1.6 0">
-      <a-camera>
-        <!-- Курсор: маленькая белая точка в центре взгляда -->
-        <a-cursor
-          material="color: white; shader: flat"
-          raycaster="objects: .clickable"
-          fuse="false"
-        ></a-cursor>
-      </a-camera>
-    </a-entity>
+  <div class="scene-wrapper">
+    <SceneView
+      :location="currentLocation"
+      @navigate="goTo"
+    />
 
-    
-  </a-scene>
-   <div 
-      class="fade-overlay" 
-      :class="{ 'active': isTransitioning }"
-    ></div>
+    <!-- Плавный переход -->
+    <div class="fade-overlay" :class="{ active: isTransitioning }"></div>
+
+    <!-- Подпись локации (обычный HTML поверх 3D) -->
+    <div class="location-label">{{ currentLocation.name }}</div>
+  </div>
 </template>
 
-<style scoped>
-/* Убираем отступы, чтобы сцена занимала весь экран */
+<style>
 body, html {
   margin: 0;
   padding: 0;
   overflow: hidden;
 }
+
 .scene-wrapper {
   position: relative;
   width: 100vw;
   height: 100vh;
 }
 
-/* Оверлей поверх всей сцены */
 .fade-overlay {
   position: fixed;
   inset: 0;
   background: black;
   opacity: 0;
-  pointer-events: none; /* чтобы не блокировал клики, когда прозрачный */
+  pointer-events: none;
   transition: opacity 0.4s ease-in-out;
   z-index: 10;
 }
-
 .fade-overlay.active {
   opacity: 1;
-  pointer-events: all; /* блокируем клики во время перехода */
+  pointer-events: all;
+}
+
+.location-label {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #4CC9F0;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  border-radius: 6px;
+  z-index: 5;
+  pointer-events: none;
 }
 </style>
