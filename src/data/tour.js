@@ -2,7 +2,7 @@
 export const tour = {
   // === УЛИЦА ===
   street: {
-    src: 'assets/street/loc-1.jpg',
+    src: 'assets/street/alt.jpg',
     name: 'Улица',
     skyRotation: '0 -130 0', 
     buttons: [
